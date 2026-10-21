@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>商品管理系统</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  :root {
+    --primary: #2563eb;
+    --primary-hover: #1d4ed8;
+    --danger: #dc2626;
+    --danger-hover: #b91c1c;
+    --success: #16a34a;
+    --bg: #f1f5f9;
+    --card: #ffffff;
+    --border: #e2e8f0;
+    --text: #1e293b;
+    --text-light: #64748b;
+    --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+    --shadow-lg: 0 10px 15px -3px rgba(0,0,0,0.1), 0 4px 6px -2px rgba(0,0,0,0.05);
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+    min-height: 100vh;
+  }
+  .container { max-width: 1100px; margin: 0 auto; padding: 24px 20px; }
+
+  header {
+    background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+    color: #fff;
+    padding: 28px 20px;
+    box-shadow: var(--shadow-lg);
+  }
+  header h1 { font-size: 26px; font-weight: 600; }
+  header p { opacity: 0.9; margin-top: 6px; font-size: 14px; }
+
+  .card {
+    background: var(--card);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 22px;
+    margin-bottom: 20px;
+  }
+  .card h2 { font-size: 18px; margin-bottom: 16px; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .card h2::before { content: ""; width: 4px; height: 18px; background: var(--primary); border-radius: 2px; }
+
+  .form-row { display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 12px; align-items: end; }
+  @media (max-width: 640px) { .form-row { grid-template-columns: 1fr; } }
+
+  .field label { display: block; font-size: 13px; font-weight: 500; margin-bottom: 6px; color: var(--text-light); }
+  .field input {
+    width: 100%; padding: 10px 12px; border: 1px solid var(--border);
+    border-radius: 8px; font-size: 14px; transition: border-color 0.2s, box-shadow 0.2s;
+  }
+  .field input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+  .field input.invalid { border-color: var(--danger); }
+
+  .btn {
+    padding: 10px 18px; border: none; border-radius: 8px; font-size: 14px;
+    font-weight: 500; cursor: pointer; transition: all 0.2s; white-space: nowrap;
+  }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { background: var(--danger-hover); }
+  .btn-edit { background: #f59e0b; color: #fff; }
+  .btn-edit:hover { background: #d97706; }
+  .btn-sm { padding: 6px 12px; font-size: 13px; }
+  .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+  .toolbar { display: flex; gap: 12px; align-items: center; margin-bottom: 16px; flex-wrap: wrap; }
+  .search-box { flex: 1; min-width: 220px; position: relative; }
+  .search-box input { width: 100%; padding: 10px 12px 10px 38px; border: 1px solid var(--border); border-radius: 8px; font-size: 14px; }
+  .search-box input:focus { outline: none; border-color: var(--primary); box-shadow: 0 0 0 3px rgba(37,99,235,0.15); }
+  .search-box::before { content: "🔍"; position: absolute; left: 12px; top: 50%; transform: translateY(-50%); font-size: 14px; }
+  .stat { font-size: 13px; color: var(--text-light); }
+
+  table { width: 100%; border-collapse: collapse; }
+  thead th { text-align: left; padding: 12px 10px; font-size: 13px; font-weight: 600; color: var(--text-light); border-bottom: 2px solid var(--border); }
+  tbody td { padding: 12px 10px; border-bottom: 1px solid var(--border); font-size: 14px; }
+  tbody tr:hover { background: #f8fafc; }
+  tbody tr.editing { background: #fef3c7; }
+  .price { color: var(--success); font-weight: 600; }
+  .actions { display: flex; gap: 8px; }
+  .empty { text-align: center; padding: 40px 20px; color: var(--text-light); }
+  .empty .icon { font-size: 42px; margin-bottom: 10px; }
+
+  .msg { padding: 10px 14px; border-radius: 8px; font-size: 13px; margin-top: 12px; display: none; }
+  .msg.error { display: block; background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+  .msg.success { display: block; background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+
+  .toast {
+    position: fixed; top: 20px; right: 20px; padding: 12px 18px; border-radius: 8px;
+    color: #fff; font-size: 14px; box-shadow: var(--shadow-lg); opacity: 0;
+    transform: translateX(20px); transition: all 0.3s; z-index: 1000;
+  }
+  .toast.show { opacity: 1; transform: translateX(0); }
+  .toast.success { background: var(--success); }
+  .toast.error { background: var(--danger); }
+
+  .editing-row input { width: 100%; padding: 6px 8px; border: 1px solid var(--primary); border-radius: 6px; font-size: 14px; }
+  .editing-row input.invalid { border-color: var(--danger); }
+</style>
+</head>
+<body>
+<header>
+  <h1>📦 商品管理系统</h1>
+  <p>基于 CodeArts 代码智能体构建 · 数据保存在浏览器本地</p>
+</header>
+
+<div class="container">
+  <div class="card">
+    <h2>添加商品</h2>
+    <div class="form-row">
+      <div class="field">
+        <label for="nameInput">商品名称</label>
+        <input type="text" id="nameInput" placeholder="请输入商品名称" maxlength="50">
+      </div>
+      <div class="field">
+        <label for="qtyInput">数量</label>
+        <input type="number" id="qtyInput" placeholder="数量" min="0" step="1">
+      </div>
+      <div class="field">
+        <label for="priceInput">单价（元）</label>
+        <input type="number" id="priceInput" placeholder="单价" min="0" step="0.01">
+      </div>
+      <button class="btn btn-primary" id="addBtn">添加</button>
+    </div>
+    <div class="msg" id="formMsg"></div>
+  </div>
+
+  <div class="card">
+    <div class="toolbar">
+      <div class="search-box">
+        <input type="text" id="searchInput" placeholder="按商品名称搜索...">
+      </div>
+      <div class="stat" id="stat"></div>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th style="width:50px">序号</th>
+          <th>商品名称</th>
+          <th style="width:100px">数量</th>
+          <th style="width:120px">单价</th>
+          <th style="width:120px">小计</th>
+          <th style="width:160px">操作</th>
+        </tr>
+      </thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty" id="empty" style="display:none">
+      <div class="icon">🗂️</div>
+      <div>暂无商品数据，请在上方添加</div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  "use strict";
+  var STORAGE_KEY = "codearts_product_list";
+  var products = [];
+  var editingId = null;
+
+  var nameInput = document.getElementById("nameInput");
+  var qtyInput = document.getElementById("qtyInput");
+  var priceInput = document.getElementById("priceInput");
+  var addBtn = document.getElementById("addBtn");
+  var formMsg = document.getElementById("formMsg");
+  var searchInput = document.getElementById("searchInput");
+  var tbody = document.getElementById("tbody");
+  var emptyBox = document.getElementById("empty");
+  var stat = document.getElementById("stat");
+  var toast = document.getElementById("toast");
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      products = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(products)) products = [];
+    } catch (e) { products = []; }
+  }
+  function save() { localStorage.setItem(STORAGE_KEY, JSON.stringify(products)); }
+
+  function showToast(text, type) {
+    toast.textContent = text;
+    toast.className = "toast " + type + " show";
+    setTimeout(function () { toast.className = "toast"; }, 2000);
+  }
+
+  function showFormMsg(text, type) {
+    formMsg.textContent = text;
+    formMsg.className = "msg " + type;
+  }
+  function clearFormMsg() { formMsg.className = "msg"; }
+
+  function validate(name, qty, price) {
+    name = (name || "").trim();
+    if (!name) return "商品名称不能为空";
+    if (name.length > 50) return "商品名称不能超过50个字符";
+    if (qty === "" || qty === null || isNaN(qty)) return "数量必须为数字";
+    var q = Number(qty);
+    if (q < 0) return "数量不能为负数";
+    if (!Number.isInteger(q)) return "数量必须为整数";
+    if (price === "" || price === null || isNaN(price)) return "单价必须为数字";
+    var p = Number(price);
+    if (p < 0) return "单价不能为负数";
+    if (p > 99999999) return "单价超出合理范围";
+    return null;
+  }
+
+  function genId() { return "p_" + Date.now() + "_" + Math.floor(Math.random() * 10000); }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
+    });
+  }
+
+  function render() {
+    var keyword = searchInput.value.trim().toLowerCase();
+    var list = products.filter(function (p) {
+      return !keyword || p.name.toLowerCase().indexOf(keyword) !== -1;
+    });
+
+    tbody.innerHTML = "";
+    if (list.length === 0) {
+      emptyBox.style.display = "block";
+      stat.textContent = products.length === 0 ? "共 0 件商品" : "未匹配到商品（总计 " + products.length + " 件）";
+      return;
+    }
+    emptyBox.style.display = "none";
+
+    var totalQty = 0, totalAmount = 0;
+    list.forEach(function (p, idx) {
+      totalQty += p.qty;
+      totalAmount += p.qty * p.price;
+      var tr = document.createElement("tr");
+      if (editingId === p.id) {
+        tr.className = "editing-row editing";
+        tr.innerHTML =
+          '<td>' + (idx + 1) + '</td>' +
+          '<td><input type="text" id="ed_name" value="' + escapeHtml(p.name) + '" maxlength="50"></td>' +
+          '<td><input type="number" id="ed_qty" value="' + p.qty + '" min="0" step="1"></td>' +
+          '<td><input type="number" id="ed_price" value="' + p.price + '" min="0" step="0.01"></td>' +
+          '<td>—</td>' +
+          '<td class="actions"><button class="btn btn-primary btn-sm" data-act="save">保存</button>' +
+          '<button class="btn btn-sm" data-act="cancel" style="background:#94a3b8;color:#fff">取消</button></td>';
+      } else {
+        tr.innerHTML =
+          '<td>' + (idx + 1) + '</td>' +
+          '<td>' + escapeHtml(p.name) + '</td>' +
+          '<td>' + p.qty + '</td>' +
+          '<td class="price">¥' + p.price.toFixed(2) + '</td>' +
+          '<td class="price">¥' + (p.qty * p.price).toFixed(2) + '</td>' +
+          '<td class="actions"><button class="btn btn-edit btn-sm" data-act="edit" data-id="' + p.id + '">编辑</button>' +
+          '<button class="btn btn-danger btn-sm" data-act="del" data-id="' + p.id + '">删除</button></td>';
+      }
+      tbody.appendChild(tr);
+    });
+
+    stat.textContent = "共 " + products.length + " 件商品 · 合计 " + totalQty + " 件 · 金额 ¥" + totalAmount.toFixed(2);
+  }
+
+  function addProduct() {
+    clearFormMsg();
+    var name = nameInput.value;
+    var qty = qtyInput.value;
+    var price = priceInput.value;
+    var err = validate(name, qty, price);
+    if (err) {
+      showFormMsg(err, "error");
+      showToast(err, "error");
+      return;
+    }
+    products.push({ id: genId(), name: name.trim(), qty: Number(qty), price: Number(price) });
+    save();
+    nameInput.value = ""; qtyInput.value = ""; priceInput.value = "";
+    showFormMsg("添加成功", "success");
+    showToast("商品添加成功", "success");
+    render();
+  }
+
+  tbody.addEventListener("click", function (e) {
+    var btn = e.target.closest("button");
+    if (!btn) return;
+    var act = btn.getAttribute("data-act");
+    var id = btn.getAttribute("data-id");
+
+    if (act === "del") {
+      var item = products.find(function (p) { return p.id === id; });
+      if (!item) return;
+      if (!confirm("确认删除商品「" + item.name + "」吗？")) return;
+      products = products.filter(function (p) { return p.id !== id; });
+      save();
+      showToast("已删除「" + item.name + "」", "success");
+      render();
+    } else if (act === "edit") {
+      editingId = id;
+      render();
+      var n = document.getElementById("ed_name");
+      if (n) n.focus();
+    } else if (act === "cancel") {
+      editingId = null;
+      render();
+    } else if (act === "save") {
+      var en = document.getElementById("ed_name");
+      var eq = document.getElementById("ed_qty");
+      var ep = document.getElementById("ed_price");
+      var err = validate(en.value, eq.value, ep.value);
+      if (err) {
+        showToast(err, "error");
+        return;
+      }
+      var target = products.find(function (p) { return p.id === editingId; });
+      if (target) {
+        target.name = en.value.trim();
+        target.qty = Number(eq.value);
+        target.price = Number(ep.value);
+        save();
+        showToast("修改已保存", "success");
+      }
+      editingId = null;
+      render();
+    }
+  });
+
+  addBtn.addEventListener("click", addProduct);
+  [nameInput, qtyInput, priceInput].forEach(function (el) {
+    el.addEventListener("input", clearFormMsg);
+    el.addEventListener("keydown", function (e) { if (e.key === "Enter") addProduct(); });
+  });
+  searchInput.addEventListener("input", render);
+
+  load();
+  if (products.length === 0) {
+    products = [
+      { id: genId(), name: "华为云 ECS 通用计算型", qty: 5, price: 199.00 },
+      { id: genId(), name: "OBS 对象存储 100GB", qty: 10, price: 9.90 },
+      { id: genId(), name: "RDS MySQL 基础版", qty: 2, price: 320.00 }
+    ];
+    save();
+  }
+  render();
+})();
+</script>
+</body>
+</html>
